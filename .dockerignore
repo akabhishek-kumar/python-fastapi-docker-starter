@@ -1,0 +1,43 @@
+# .dockerignore works exactly like .gitignore but for Docker builds.
+# Files listed here are NOT copied into the image when Docker runs "COPY . ."
+# Smaller image = faster builds + less attack surface.
+
+# Python cache — never needed in container
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment — container has its own Python, never copy venv in
+.venv/
+venv/
+env/
+
+# Git history — not needed in image
+.git/
+.gitignore
+
+# Environment files — never bake secrets into the image!
+# Pass them via docker-compose environment: or .env file at runtime
+.env
+.env.*
+
+# Test files — not needed in production image
+tests/
+pytest.ini
+.pytest_cache/
+
+# Editor/IDE config
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

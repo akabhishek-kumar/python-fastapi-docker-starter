@@ -1,0 +1,51 @@
+# docker-compose defines multiple services (containers) that work together.
+# Run everything with: docker compose up --build
+# Stop everything with: docker compose down
+
+services:
+
+  # ── Service 1: PostgreSQL database ─────────────────────────────────────────
+  db:
+    image: postgres:16-alpine        # official Postgres image, alpine = smaller
+    restart: unless-stopped          # auto-restart if it crashes
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: fastapi_starter
+    ports:
+      - "5432:5432"                  # host:container — lets you connect via DBeaver/pgAdmin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # persist DB data across restarts
+                                                  # without this, data is lost on "docker compose down"
+    healthcheck:
+      # Docker will keep checking this until Postgres is ready to accept connections.
+      # The "api" service below waits for this healthcheck to pass before starting.
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Service 2: FastAPI application ─────────────────────────────────────────
+  api:
+    build: .                         # build image from Dockerfile in current directory
+    restart: unless-stopped
+    ports:
+      - "8000:8000"                  # host port 8000 → container port 8000
+    environment:
+      # KEY CONCEPT: inside Docker, containers talk to each other by SERVICE NAME.
+      # "localhost" means the container itself — NOT the db container.
+      # So we replace "localhost" with "db" (the service name above).
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/fastapi_starter
+    depends_on:
+      db:
+        condition: service_healthy   # wait for db healthcheck to pass before starting
+    volumes:
+      - .:/app                       # mount current directory into container
+                                     # lets you edit code and see changes without rebuild
+                                     # REMOVE this in production (bake code into image)
+
+# ── Named volumes ──────────────────────────────────────────────────────────────
+# Volumes declared here are managed by Docker and persist on your machine
+# even after "docker compose down". Only "docker compose down -v" deletes them.
+volumes:
+  postgres_data:
